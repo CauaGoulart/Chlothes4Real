@@ -1,0 +1,29 @@
+# Use uma imagem base do Maven com JDK 17 para compilar a aplicação
+FROM maven:3.8.6-eclipse-temurin-17 as builder
+
+WORKDIR /app
+
+# Copie o arquivo pom.xml e baixe as dependências
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copie o código fonte para dentro do container
+COPY src ./src
+
+# Compile e empacote a aplicação
+RUN mvn clean package -DskipTests
+
+# Use uma imagem base mais leve do JRE para rodar a aplicação
+FROM eclipse-temurin:17-jre-alpine
+
+# Defina o diretório de trabalho no container
+WORKDIR /app
+
+# Copie o JAR gerado do estágio de build para o novo container
+COPY --from=builder /app/target/poc-java-docker-0.0.1-SNAPSHOT.jar app.jar
+
+# Exponha a porta 8080
+EXPOSE 8080
+
+# Comando para rodar a aplicação
+ENTRYPOINT ["java", "-jar", "app.jar"]
